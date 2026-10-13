@@ -3,7 +3,8 @@ import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
 
 export const SESSION_COOKIE = "session";
-const SESSION_DAYS = 7;
+const REMEMBER_DAYS = 7;
+const SHORT_SESSION = "12h";
 
 export type SessionPayload = {
   adminId: string;
@@ -18,11 +19,11 @@ function getKey() {
   return new TextEncoder().encode(secret);
 }
 
-export async function encrypt(payload: SessionPayload) {
+export async function encrypt(payload: SessionPayload, remember: boolean) {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
-    .setExpirationTime(`${SESSION_DAYS}d`)
+    .setExpirationTime(remember ? `${REMEMBER_DAYS}d` : SHORT_SESSION)
     .sign(getKey());
 }
 
@@ -46,16 +47,21 @@ export async function decrypt(
   }
 }
 
-export async function createSession(payload: SessionPayload) {
-  const token = await encrypt(payload);
-  const expires = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
+export async function createSession(
+  payload: SessionPayload,
+  remember: boolean,
+) {
+  const token = await encrypt(payload, remember);
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    expires,
+    // Tanpa "expires" = cookie hilang saat browser ditutup.
+    ...(remember
+      ? { expires: new Date(Date.now() + REMEMBER_DAYS * 24 * 60 * 60 * 1000) }
+      : {}),
   });
 }
 

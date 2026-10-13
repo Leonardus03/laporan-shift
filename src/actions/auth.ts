@@ -22,6 +22,7 @@ export async function login(
 ): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const remember = formData.get("remember") === "on";
 
   if (!email || !password) {
     return { error: "Email dan password wajib diisi." };
@@ -63,7 +64,7 @@ export async function login(
     return { error: "Email atau password salah." };
   }
 
-  await createSession({ adminId: admin.id, name: admin.name });
+  await createSession({ adminId: admin.id, name: admin.name }, remember);
   await logAudit({
     actorType: "ADMIN",
     actorId: admin.id,
