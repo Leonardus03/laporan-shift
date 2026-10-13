@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  DROPDOWN
+  CHECKBOX
+  PHOTO
+}
+
+enum ReportStatus {
+  SUBMITTED
+  REVIEWED
+  REJECTED
+}
+
+enum ActorType {
+  ADMIN
+  REPORTER
+  SYSTEM
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Shift {
+  id      String   @id @default(cuid())
+  name    String   @unique
+  reports Report[]
+}
+
+model Location {
+  id       String   @id @default(cuid())
+  name     String   @unique
+  isActive Boolean  @default(true)
+  reports  Report[]
+}
+
+model Pallet {
+  id       String  @id @default(cuid())
+  code     String  @unique
+  name     String
+  isActive Boolean @default(true)
+}
+
+model ReportForm {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  description String?
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  fields      FormField[]
+  reports     Report[]
+}
+
+model FormField {
+  id       String         @id @default(cuid())
+  formId   String
+  form     ReportForm     @relation(fields: [formId], references: [id], onDelete: Cascade)
+  key      String
+  label    String
+  type     FieldType
+  required Boolean        @default(false)
+  options  Json?
+  maxFiles Int?
+  order    Int            @default(0)
+  isActive Boolean        @default(true)
+  answers  ReportAnswer[]
+  files    ReportFile[]
+
+  @@unique([formId, key])
+}
+
+model Report {
+  id           String         @id @default(cuid())
+  formId       String
+  form         ReportForm     @relation(fields: [formId], references: [id])
+  reporterName String
+  reportDate   DateTime       @db.Date
+  shiftId      String
+  shift        Shift          @relation(fields: [shiftId], references: [id])
+  locationId   String?
+  location     Location?      @relation(fields: [locationId], references: [id])
+  status       ReportStatus   @default(SUBMITTED)
+  ipAddress    String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  answers      ReportAnswer[]
+  files        ReportFile[]
+
+  @@index([formId, reportDate])
+  @@index([shiftId, reportDate])
+  @@index([locationId])
+  @@index([status])
+}
+
+model ReportAnswer {
+  id          String    @id @default(cuid())
+  reportId    String
+  report      Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  fieldId     String
+  field       FormField @relation(fields: [fieldId], references: [id])
+  valueText   String?
+  valueNumber Float?
+  valueDate   DateTime? @db.Date
+  valueJson   Json?
+
+  @@unique([reportId, fieldId])
+  @@index([fieldId])
+}
+
+model ReportFile {
+  id        String    @id @default(cuid())
+  reportId  String
+  report    Report    @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  fieldId   String
+  field     FormField @relation(fields: [fieldId], references: [id])
+  url       String
+  pathname  String
+  mimeType  String?
+  sizeBytes Int?
+  createdAt DateTime  @default(now())
+
+  @@index([reportId])
+  @@index([fieldId])
+}
+
+model AuditLog {
+  id        String    @id @default(cuid())
+  actorType ActorType
+  actorId   String?
+  actorName String
+  action    String
+  entity    String
+  entityId  String?
+  changes   Json?
+  ipAddress String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([entity, entityId])
+  @@index([actorType, actorId])
+}
