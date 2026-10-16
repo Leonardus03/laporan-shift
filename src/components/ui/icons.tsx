@@ -157,3 +157,16 @@ export const InboxStackIcon = make(
     <path d="M7 20h10" />
   </>
 );
+
+export const CameraIcon = make(
+  <>
+    <path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z" />
+    <circle cx="12" cy="13" r="3.5" />
+  </>
+);
+export const AlertCircleIcon = make(
+  <>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M12 8v5M12 16.5h.01" />
+  </>
+);
