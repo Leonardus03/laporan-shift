@@ -1,11 +1,12 @@
 import "server-only";
-import type { Prisma, ReportStatus } from "@prisma/client";
+import type { ReportStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { getReportTable } from "@/lib/reports";
 
-export const PAGE_SIZE = 10;
+export { PAGE_SIZE, STATUS_OPTIONS, formatWibTime } from "@/lib/reports";
+
 export const RANGE_OPTIONS = [7, 14, 30] as const;
 export type RangeOption = (typeof RANGE_OPTIONS)[number];
-export const STATUS_OPTIONS: ReportStatus[] = ["SUBMITTED", "REVIEWED", "REJECTED"];
 
 export type DashboardFilters = {
   range: RangeOption;
@@ -41,17 +42,6 @@ function keyToDate(key: string) {
   return new Date(`${key}T00:00:00Z`);
 }
 
-export function formatWibTime(d: Date) {
-  return new Intl.DateTimeFormat("id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Jakarta",
-  })
-    .format(d)
-    .replace(".", ":");
-}
-
 export function formatWibLongDate(d: Date) {
   return new Intl.DateTimeFormat("id-ID", {
     weekday: "long",
@@ -70,61 +60,37 @@ export async function getDashboardData(f: DashboardFilters) {
   const prevEndKey = addDays(startKey, -1);
   const shiftWhere = f.shiftId ? { shiftId: f.shiftId } : {};
 
-  const q = f.q?.replace(/^#/, "").trim();
-  const tableWhere: Prisma.ReportWhereInput = {
-    ...shiftWhere,
-    ...(f.formId ? { formId: f.formId } : {}),
-    ...(f.status ? { status: f.status } : {}),
-    ...(q
-      ? {
-          OR: [
-            { reporterName: { contains: q, mode: "insensitive" } },
-            { id: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : {}),
-  };
-
-  const [shifts, forms, reports, prevTotal, todayReports, tableTotal, tableRows] =
-    await Promise.all([
-      prisma.shift.findMany({ orderBy: { name: "asc" } }),
-      prisma.reportForm.findMany({
-        orderBy: { createdAt: "asc" },
-        select: { id: true, name: true, isActive: true },
-      }),
-      prisma.report.findMany({
-        where: {
-          ...shiftWhere,
-          reportDate: { gte: keyToDate(startKey), lte: keyToDate(todayKey) },
-        },
-        select: { reportDate: true, shiftId: true, formId: true, status: true },
-      }),
-      prisma.report.count({
-        where: {
-          ...shiftWhere,
-          reportDate: { gte: keyToDate(prevStartKey), lte: keyToDate(prevEndKey) },
-        },
-      }),
-      prisma.report.findMany({
-        where: { reportDate: keyToDate(todayKey) },
-        select: { shiftId: true, createdAt: true },
-      }),
-      prisma.report.count({ where: tableWhere }),
-      prisma.report.findMany({
-        where: tableWhere,
-        orderBy: { createdAt: "desc" },
-        skip: (f.page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
-        include: {
-          form: { select: { id: true, name: true } },
-          shift: { select: { name: true } },
-          answers: {
-            include: { field: { select: { label: true, type: true, order: true } } },
-          },
-          _count: { select: { files: true } },
-        },
-      }),
-    ]);
+  const [shifts, forms, reports, prevTotal, todayReports, table] = await Promise.all([
+    prisma.shift.findMany({ orderBy: { name: "asc" } }),
+    prisma.reportForm.findMany({
+      orderBy: { createdAt: "asc" },
+      select: { id: true, name: true, isActive: true },
+    }),
+    prisma.report.findMany({
+      where: {
+        ...shiftWhere,
+        reportDate: { gte: keyToDate(startKey), lte: keyToDate(todayKey) },
+      },
+      select: { reportDate: true, shiftId: true, formId: true, status: true },
+    }),
+    prisma.report.count({
+      where: {
+        ...shiftWhere,
+        reportDate: { gte: keyToDate(prevStartKey), lte: keyToDate(prevEndKey) },
+      },
+    }),
+    prisma.report.findMany({
+      where: { reportDate: keyToDate(todayKey) },
+      select: { shiftId: true, createdAt: true },
+    }),
+    getReportTable({
+      shiftId: f.shiftId,
+      formId: f.formId,
+      status: f.status,
+      q: f.q,
+      page: f.page,
+    }),
+  ]);
 
   // --- tren harian per shift ---
   const days: DayPoint[] = [];
@@ -193,34 +159,6 @@ export async function getDashboardData(f: DashboardFilters) {
     null
   );
 
-  // --- baris tabel ---
-  const rows = tableRows.map((r) => {
-    const parts = r.answers
-      .filter((a) => a.field.type !== "PHOTO")
-      .sort((a, b) => a.field.order - b.field.order)
-      .map((a) => {
-        const v = a.valueNumber ?? a.valueText;
-        return v === null || v === "" ? null : `${a.field.label}: ${v}`;
-      })
-      .filter((x): x is string => x !== null);
-    if (r._count.files > 0) parts.push(`${r._count.files} foto`);
-
-    return {
-      id: r.id,
-      shortId: `#${r.id.slice(-6).toUpperCase()}`,
-      time: formatWibTime(r.createdAt),
-      reportDate: `${r.reportDate.toISOString().slice(8, 10)}/${r.reportDate
-        .toISOString()
-        .slice(5, 7)}`,
-      shiftName: r.shift.name,
-      formId: r.form.id,
-      formName: r.form.name,
-      reporterName: r.reporterName,
-      status: r.status,
-      summary: parts.length ? parts.join(" · ") : "—",
-    };
-  });
-
   return {
     now,
     shifts,
@@ -238,7 +176,7 @@ export async function getDashboardData(f: DashboardFilters) {
     todayPerShift,
     todayTotal: todayReports.length,
     lastToday,
-    tableTotal,
-    rows,
+    tableTotal: table.total,
+    rows: table.rows,
   };
 }

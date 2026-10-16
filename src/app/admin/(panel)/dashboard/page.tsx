@@ -213,6 +213,8 @@ export default async function DashboardPage({
         page={page}
         forms={data.forms.map((f) => ({ id: f.id, name: f.name }))}
         current={current}
+        basePath="/admin/dashboard"
+        viewAllHref="/admin/laporan"
       />
 
       <p className="pb-2 text-center text-xs text-slate-400">
