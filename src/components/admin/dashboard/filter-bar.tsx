@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { Spinner } from "@/components/ui/spinner";
-import { DownloadIcon } from "@/components/ui/icons";
+import { ExportMenu } from "@/components/admin/export-menu";
 
 const selectClass =
   "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100";
@@ -62,18 +62,7 @@ export function FilterBar({
           </option>
         ))}
       </select>
-      <button
-        type="button"
-        disabled
-        title="Export Excel, PDF, dan CSV akan ditambahkan di tahap berikutnya"
-        className="flex cursor-not-allowed items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-400"
-      >
-        <DownloadIcon className="h-4 w-4" />
-        Ekspor
-        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">
-          Segera
-        </span>
-      </button>
+      <ExportMenu current={current} />
     </div>
   );
 }

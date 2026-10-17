@@ -5,6 +5,12 @@ import { prisma } from "@/lib/prisma";
 export const PAGE_SIZE = 10;
 export const STATUS_OPTIONS: ReportStatus[] = ["SUBMITTED", "REVIEWED", "REJECTED"];
 
+export const STATUS_LABEL: Record<ReportStatus, string> = {
+  REVIEWED: "Selesai",
+  SUBMITTED: "Menunggu Review",
+  REJECTED: "Ditolak",
+};
+
 export type ReportFilters = {
   shiftId?: string;
   formId?: string;
@@ -12,6 +18,40 @@ export type ReportFilters = {
   q?: string;
   page: number;
 };
+
+export type ReportWhereFilters = {
+  shiftId?: string;
+  formId?: string;
+  status?: ReportStatus;
+  q?: string;
+  from?: string; // YYYY-MM-DD
+  to?: string; // YYYY-MM-DD
+};
+
+export function buildReportWhere(f: ReportWhereFilters): Prisma.ReportWhereInput {
+  const q = f.q?.replace(/^#/, "").trim();
+  return {
+    ...(f.shiftId ? { shiftId: f.shiftId } : {}),
+    ...(f.formId ? { formId: f.formId } : {}),
+    ...(f.status ? { status: f.status } : {}),
+    ...(f.from || f.to
+      ? {
+          reportDate: {
+            ...(f.from ? { gte: new Date(`${f.from}T00:00:00Z`) } : {}),
+            ...(f.to ? { lte: new Date(`${f.to}T00:00:00Z`) } : {}),
+          },
+        }
+      : {}),
+    ...(q
+      ? {
+          OR: [
+            { reporterName: { contains: q, mode: "insensitive" } },
+            { id: { contains: q, mode: "insensitive" } },
+          ],
+        }
+      : {}),
+  };
+}
 
 export function formatWibTime(d: Date) {
   return new Intl.DateTimeFormat("id-ID", {
@@ -40,20 +80,7 @@ function formatDateKey(d: Date) {
 }
 
 export async function getReportTable(f: ReportFilters) {
-  const q = f.q?.replace(/^#/, "").trim();
-  const where: Prisma.ReportWhereInput = {
-    ...(f.shiftId ? { shiftId: f.shiftId } : {}),
-    ...(f.formId ? { formId: f.formId } : {}),
-    ...(f.status ? { status: f.status } : {}),
-    ...(q
-      ? {
-          OR: [
-            { reporterName: { contains: q, mode: "insensitive" } },
-            { id: { contains: q, mode: "insensitive" } },
-          ],
-        }
-      : {}),
-  };
+  const where = buildReportWhere(f);
 
   const [total, found] = await Promise.all([
     prisma.report.count({ where }),

@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/dal";
 import { prisma } from "@/lib/prisma";
 import { getReportTable, STATUS_OPTIONS } from "@/lib/reports";
 import { ReportsTable } from "@/components/admin/dashboard/reports-table";
+import { ExportMenu } from "@/components/admin/export-menu";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -45,11 +46,14 @@ export default async function LaporanMasukPage({
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Laporan Masuk</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Semua laporan shift yang dikirim pelapor. Klik Detail untuk melihat isian dan foto.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Laporan Masuk</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Semua laporan shift yang dikirim pelapor. Klik Detail untuk melihat isian dan foto.
+          </p>
+        </div>
+        <ExportMenu current={current} />
       </div>
       <ReportsTable
         rows={table.rows}
