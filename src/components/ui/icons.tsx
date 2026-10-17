@@ -170,3 +170,11 @@ export const AlertCircleIcon = make(
     <path d="M12 8v5M12 16.5h.01" />
   </>
 );
+
+export const ImageIcon = make(
+  <>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <circle cx="9" cy="10" r="1.8" />
+    <path d="M21 16l-5-5-8 8" />
+  </>
+);

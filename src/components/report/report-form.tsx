@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useEffectEvent, useState } from "react";
 import { submitReport } from "@/actions/report";
-import { CheckCircleIcon } from "@/components/ui/icons";
+import { CameraIcon, CheckCircleIcon, ListIcon, UsersIcon } from "@/components/ui/icons";
 import { Spinner } from "@/components/ui/spinner";
 import type { FieldDef, FieldValue } from "@/lib/report-config";
 import { PhotoField, type PhotoState } from "./photo-field";
@@ -46,6 +46,46 @@ function Field({
       {children}
       {error && <p className="text-sm text-red-600">{error}</p>}
     </div>
+  );
+}
+
+function Section({
+  id,
+  icon,
+  title,
+  required,
+  hint,
+  error,
+  children,
+}: {
+  id?: string;
+  icon: React.ReactNode;
+  title: string;
+  required?: boolean;
+  hint?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <section
+      id={id}
+      className="rounded-3xl bg-white p-5 shadow-xl shadow-slate-200/70 ring-1 ring-slate-100 sm:p-6"
+    >
+      <header className="mb-4 flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600">
+          {icon}
+        </span>
+        <div className="min-w-0">
+          <h2 className="text-base font-bold text-slate-900">
+            {title}
+            {required && <span className="ml-0.5 text-red-500">*</span>}
+          </h2>
+          {hint && <p className="text-xs text-slate-500">{hint}</p>}
+        </div>
+      </header>
+      <div className="space-y-5">{children}</div>
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+    </section>
   );
 }
 
@@ -264,157 +304,177 @@ export function ReportForm({ slug, name: formName, description, fields, shifts, 
 
   const progressPct = totalPhotos > 0 ? Math.round((donePhotos / totalPhotos) * 100) : 0;
 
+  const infoFields = fields.filter((f) => f.type !== "PHOTO");
+  const photoFields = fields.filter((f) => f.type === "PHOTO");
+
   return (
     <form
       key={formKey}
       onSubmit={handleSubmit}
       noValidate
       aria-busy={locked}
-      className="space-y-6 rounded-3xl bg-white p-6 shadow-xl shadow-slate-200/70 ring-1 ring-slate-100"
+      className="space-y-4"
     >
-      <div>
+      <div className="px-1">
         <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">{formName}</h1>
         {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
       </div>
 
-      <fieldset disabled={locked} className="m-0 min-w-0 space-y-6 border-0 p-0">
-        <Field id="field-_name" label="Nama" required error={errors._name}>
-          <input
-            value={reporter}
-            onChange={(e) => setReporter(e.target.value)}
-            autoComplete="name"
-            placeholder="Nama lengkap"
-            className={inputClass}
-          />
-        </Field>
+      <fieldset disabled={locked} className="m-0 min-w-0 space-y-4 border-0 p-0">
+        <Section icon={<UsersIcon className="h-5 w-5" />} title="Data Pelapor" hint="Isi nama, shift, dan tanggal laporan">
+          <Field id="field-_name" label="Nama" required error={errors._name}>
+            <input
+              value={reporter}
+              onChange={(e) => setReporter(e.target.value)}
+              autoComplete="name"
+              placeholder="Nama lengkap"
+              className={inputClass}
+            />
+          </Field>
 
-        <Field id="field-_shift" label="Shift" required error={errors._shift}>
-          <div className="grid grid-cols-2 gap-2">
-            {shifts.map((s) => (
-              <label
-                key={s.id}
-                className={`flex cursor-pointer items-center justify-center rounded-2xl border px-4 py-3 text-sm font-semibold transition active:scale-[0.98] ${
-                  shiftId === s.id
-                    ? "border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
-                    : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="shift"
-                  value={s.id}
-                  checked={shiftId === s.id}
-                  onChange={() => {
-                    setShiftId(s.id);
-                    setErrors((prev) => {
-                      if (!prev._shift) return prev;
-                      const { _shift: _removed, ...rest } = prev;
-                      void _removed;
-                      return rest;
-                    });
-                  }}
-                  className="sr-only"
-                />
-                {s.name}
-              </label>
-            ))}
-          </div>
-        </Field>
-
-        <Field id="field-_date" label="Tanggal" required error={errors._date}>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
-        </Field>
-
-        {fields.map((f) => {
-          const v = values[f.key];
-          const err = errors[f.key];
-          return (
-            <Field key={f.id} id={`field-${f.key}`} label={f.label} required={f.required} error={err}>
-              {f.type === "TEXT" && (
-                <input
-                  value={typeof v === "string" ? v : ""}
-                  onChange={(e) => setValue(f.key, e.target.value)}
-                  className={inputClass}
-                />
-              )}
-              {f.type === "NUMBER" && (
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  step="any"
-                  min="0"
-                  value={typeof v === "string" ? v : ""}
-                  onChange={(e) => setValue(f.key, e.target.value)}
-                  placeholder="0"
-                  className={inputClass}
-                />
-              )}
-              {f.type === "DATE" && (
-                <input
-                  type="date"
-                  value={typeof v === "string" ? v : ""}
-                  onChange={(e) => setValue(f.key, e.target.value)}
-                  className={inputClass}
-                />
-              )}
-              {f.type === "DROPDOWN" && (
-                <select
-                  value={typeof v === "string" ? v : ""}
-                  onChange={(e) => setValue(f.key, e.target.value)}
-                  className={inputClass}
+          <Field id="field-_shift" label="Shift" required error={errors._shift}>
+            <div className="grid grid-cols-2 gap-2">
+              {shifts.map((s) => (
+                <label
+                  key={s.id}
+                  className={`flex cursor-pointer items-center justify-center rounded-2xl border px-4 py-3 text-sm font-semibold transition active:scale-[0.98] ${
+                    shiftId === s.id
+                      ? "border-indigo-600 bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
+                      : "border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                  }`}
                 >
-                  <option value="">Pilih...</option>
-                  {f.options.map((o) => (
-                    <option key={o} value={o}>
-                      {o}
-                    </option>
-                  ))}
-                </select>
-              )}
-              {f.type === "CHECKBOX" &&
-                (f.options.length > 0 ? (
-                  <div className="space-y-2">
-                    {f.options.map((o) => {
-                      const current = Array.isArray(v) ? v : [];
-                      const checked = current.includes(o);
-                      return (
-                        <label key={o} className="flex cursor-pointer items-center gap-3 text-slate-700">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() =>
-                              setValue(f.key, checked ? current.filter((x) => x !== o) : [...current, o])
-                            }
-                            className="h-5 w-5 rounded-md accent-indigo-600"
-                          />
-                          {o}
-                        </label>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <label className="flex cursor-pointer items-center gap-3 text-slate-700">
+                  <input
+                    type="radio"
+                    name="shift"
+                    value={s.id}
+                    checked={shiftId === s.id}
+                    onChange={() => {
+                      setShiftId(s.id);
+                      setErrors((prev) => {
+                        if (!prev._shift) return prev;
+                        const { _shift: _removed, ...rest } = prev;
+                        void _removed;
+                        return rest;
+                      });
+                    }}
+                    className="sr-only"
+                  />
+                  {s.name}
+                </label>
+              ))}
+            </div>
+          </Field>
+
+          <Field id="field-_date" label="Tanggal" required error={errors._date}>
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputClass} />
+          </Field>
+        </Section>
+
+        {infoFields.length > 0 && (
+          <Section icon={<ListIcon className="h-5 w-5" />} title="Isian Laporan">
+            {infoFields.map((f) => {
+              const v = values[f.key];
+              const err = errors[f.key];
+              return (
+                <Field key={f.id} id={`field-${f.key}`} label={f.label} required={f.required} error={err}>
+                  {f.type === "TEXT" && (
                     <input
-                      type="checkbox"
-                      checked={v === true}
-                      onChange={(e) => setValue(f.key, e.target.checked)}
-                      className="h-5 w-5 rounded-md accent-indigo-600"
+                      value={typeof v === "string" ? v : ""}
+                      onChange={(e) => setValue(f.key, e.target.value)}
+                      className={inputClass}
                     />
-                    Ya
-                  </label>
-                ))}
-              {f.type === "PHOTO" && (
-                <PhotoField
-                  key={`${f.key}-${formKey}`}
-                  slug={slug}
-                  label={f.label}
-                  maxFiles={f.maxFiles}
-                  onChange={(s) => updatePhoto(f.key, s)}
-                />
-              )}
-            </Field>
-          );
-        })}
+                  )}
+                  {f.type === "NUMBER" && (
+                    <input
+                      type="number"
+                      inputMode="decimal"
+                      step="any"
+                      min="0"
+                      value={typeof v === "string" ? v : ""}
+                      onChange={(e) => setValue(f.key, e.target.value)}
+                      placeholder="0"
+                      className={inputClass}
+                    />
+                  )}
+                  {f.type === "DATE" && (
+                    <input
+                      type="date"
+                      value={typeof v === "string" ? v : ""}
+                      onChange={(e) => setValue(f.key, e.target.value)}
+                      className={inputClass}
+                    />
+                  )}
+                  {f.type === "DROPDOWN" && (
+                    <select
+                      value={typeof v === "string" ? v : ""}
+                      onChange={(e) => setValue(f.key, e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Pilih...</option>
+                      {f.options.map((o) => (
+                        <option key={o} value={o}>
+                          {o}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {f.type === "CHECKBOX" &&
+                    (f.options.length > 0 ? (
+                      <div className="space-y-2">
+                        {f.options.map((o) => {
+                          const current = Array.isArray(v) ? v : [];
+                          const checked = current.includes(o);
+                          return (
+                            <label key={o} className="flex cursor-pointer items-center gap-3 text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() =>
+                                  setValue(f.key, checked ? current.filter((x) => x !== o) : [...current, o])
+                                }
+                                className="h-5 w-5 rounded-md accent-indigo-600"
+                              />
+                              {o}
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <label className="flex cursor-pointer items-center gap-3 text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={v === true}
+                          onChange={(e) => setValue(f.key, e.target.checked)}
+                          className="h-5 w-5 rounded-md accent-indigo-600"
+                        />
+                        Ya
+                      </label>
+                    ))}
+                </Field>
+              );
+            })}
+          </Section>
+        )}
+
+        {photoFields.map((f) => (
+          <Section
+            key={f.id}
+            id={`field-${f.key}`}
+            icon={<CameraIcon className="h-5 w-5" />}
+            title={f.label}
+            required={f.required}
+            hint={`Maksimal ${f.maxFiles} foto`}
+            error={errors[f.key]}
+          >
+            <PhotoField
+              key={`${f.key}-${formKey}`}
+              slug={slug}
+              label={f.label}
+              maxFiles={f.maxFiles}
+              onChange={(s) => updatePhoto(f.key, s)}
+            />
+          </Section>
+        ))}
       </fieldset>
 
       {errors._form && (

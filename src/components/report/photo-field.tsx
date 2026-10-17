@@ -2,8 +2,15 @@
 
 import { useEffect, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
-import { AlertCircleIcon, CameraIcon, CheckCircleIcon, CloseIcon } from "@/components/ui/icons";
+import {
+  AlertCircleIcon,
+  CameraIcon,
+  CheckCircleIcon,
+  CloseIcon,
+  ImageIcon,
+} from "@/components/ui/icons";
 import { Spinner } from "@/components/ui/spinner";
+import { PhotoLightbox } from "./photo-lightbox";
 import {
   BLOB_ACCESS,
   MAX_PHOTO_BYTES,
@@ -104,7 +111,9 @@ export function PhotoField({
 }) {
   const [items, setItems] = useState<Item[]>([]);
   const [notice, setNotice] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [viewer, setViewer] = useState<number | null>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
+  const galleryRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     onChange({
@@ -202,83 +211,114 @@ export function PhotoField({
   return (
     <div className="space-y-3">
       <input
-        ref={inputRef}
+        ref={cameraRef}
+        type="file"
+        accept="image/*"
+        capture="environment"
+        onChange={handleSelect}
+        className="hidden"
+        aria-label={`${label} (kamera)`}
+      />
+      <input
+        ref={galleryRef}
         type="file"
         accept="image/*"
         multiple
         onChange={handleSelect}
         className="hidden"
-        aria-label={label}
+        aria-label={`${label} (galeri)`}
       />
 
       {items.length > 0 && (
-        <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-          {items.map((i) => (
-            <li
-              key={i.id}
-              className="relative aspect-square overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200"
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={i.previewUrl} alt={i.name} className="h-full w-full object-cover" />
-
-              {i.status === "uploading" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-900/55 text-white">
-                  <Spinner className="h-6 w-6" />
-                  <span className="text-xs font-semibold">{i.progress}%</span>
-                  <div className="absolute inset-x-2 bottom-2 h-1.5 overflow-hidden rounded-full bg-white/30">
-                    <div
-                      className="h-full bg-white transition-all"
-                      style={{ width: `${i.progress}%` }}
-                    />
-                  </div>
-                </div>
-              )}
-
-              {i.status === "done" && (
-                <span className="absolute bottom-1 left-1 rounded-full bg-white/90 p-0.5 text-emerald-600 shadow">
-                  <CheckCircleIcon className="h-5 w-5" />
-                </span>
-              )}
-
-              {i.status === "error" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-red-900/80 p-1.5 text-center text-white">
-                  <AlertCircleIcon className="h-5 w-5" />
-                  <span className="line-clamp-2 text-[10px] leading-tight">{i.error}</span>
-                  <button
-                    type="button"
-                    onClick={() => retry(i)}
-                    className="rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50"
-                  >
-                    Coba lagi
-                  </button>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => remove(i.id)}
-                aria-label={`Hapus ${i.name}`}
-                className="absolute right-1 top-1 rounded-full bg-slate-900/70 p-1 text-white hover:bg-slate-900"
+        <>
+          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+            {items.map((i, idx) => (
+              <li
+                key={i.id}
+                className="relative aspect-square overflow-hidden rounded-xl bg-slate-100 ring-1 ring-slate-200"
               >
-                <CloseIcon className="h-3.5 w-3.5" />
-              </button>
-            </li>
-          ))}
-        </ul>
+                <button
+                  type="button"
+                  onClick={() => setViewer(idx)}
+                  aria-label={`Perbesar foto ${idx + 1}`}
+                  className="absolute inset-0 block h-full w-full cursor-zoom-in"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={i.previewUrl} alt={i.name} className="h-full w-full object-cover" />
+                </button>
+
+                {i.status === "uploading" && (
+                  <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-900/55 text-white">
+                    <Spinner className="h-6 w-6" />
+                    <span className="text-xs font-semibold">{i.progress}%</span>
+                    <div className="absolute inset-x-2 bottom-2 h-1.5 overflow-hidden rounded-full bg-white/30">
+                      <div
+                        className="h-full bg-white transition-all"
+                        style={{ width: `${i.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {i.status === "done" && (
+                  <span className="pointer-events-none absolute bottom-1 left-1 rounded-full bg-white/90 p-0.5 text-emerald-600 shadow">
+                    <CheckCircleIcon className="h-5 w-5" />
+                  </span>
+                )}
+
+                {i.status === "error" && (
+                  <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-red-900/80 p-1.5 text-center text-white">
+                    <AlertCircleIcon className="h-5 w-5" />
+                    <span className="line-clamp-2 text-[10px] leading-tight">{i.error}</span>
+                    <button
+                      type="button"
+                      onClick={() => retry(i)}
+                      className="rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50"
+                    >
+                      Coba lagi
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => remove(i.id)}
+                  aria-label={`Hapus ${i.name}`}
+                  className="absolute right-1 top-1 rounded-full bg-slate-900/70 p-1 text-white hover:bg-slate-900"
+                >
+                  <CloseIcon className="h-3.5 w-3.5" />
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-slate-400">Ketuk foto untuk memperbesar.</p>
+        </>
       )}
 
-      <button
-        type="button"
-        disabled={full}
-        onClick={() => inputRef.current?.click()}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 px-4 py-4 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        <CameraIcon className="h-5 w-5" />
-        {items.length === 0 ? "Ambil atau pilih foto" : "Tambah foto"}
-        <span className="font-normal text-indigo-500">
-          ({items.length}/{maxFiles})
-        </span>
-      </button>
+      <div className="grid grid-cols-2 gap-2">
+        <button
+          type="button"
+          disabled={full}
+          onClick={() => cameraRef.current?.click()}
+          className="flex items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-3 py-3.5 text-sm font-semibold text-white shadow-md shadow-indigo-600/25 transition hover:bg-indigo-700 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <CameraIcon className="h-5 w-5" />
+          Buka Kamera
+        </button>
+        <button
+          type="button"
+          disabled={full}
+          onClick={() => galleryRef.current?.click()}
+          className="flex items-center justify-center gap-2 rounded-2xl border border-indigo-200 bg-indigo-50/60 px-3 py-3.5 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <ImageIcon className="h-5 w-5" />
+          Pilih dari Galeri
+        </button>
+      </div>
+      <p className="text-xs text-slate-500">
+        {items.length} dari {maxFiles} foto
+        {full && " • batas foto tercapai"}
+      </p>
 
       {uploadingCount > 0 && (
         <p className="flex items-center gap-2 text-sm text-indigo-600">
@@ -298,6 +338,15 @@ export function PhotoField({
         </p>
       )}
       {notice && <p className="text-xs text-amber-600">{notice}</p>}
+
+      {viewer !== null && items.length > 0 && (
+        <PhotoLightbox
+          images={items.map((i) => ({ src: i.previewUrl, name: i.name }))}
+          index={viewer}
+          onClose={() => setViewer(null)}
+          onIndexChange={setViewer}
+        />
+      )}
     </div>
   );
 }
