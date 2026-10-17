@@ -2,7 +2,7 @@ import Link from "next/link";
 import { connection } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PublicShell } from "@/components/report/public-shell";
-import { ArrowRightIcon, DocumentIcon } from "@/components/ui/icons";
+import { FormCardContent } from "@/components/report/form-card";
 
 export const instant = false;
 
@@ -34,18 +34,9 @@ export default async function HomePage() {
             <li key={f.slug}>
               <Link
                 href={`/lapor/${f.slug}`}
-                className="flex items-center gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-100 transition hover:shadow-md hover:ring-indigo-200"
+                className="block rounded-3xl bg-white shadow-sm ring-1 ring-slate-100 transition hover:shadow-md hover:ring-indigo-200 active:scale-[0.99]"
               >
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-                  <DocumentIcon className="h-6 w-6" />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block text-lg font-bold text-slate-900">{f.name}</span>
-                  {f.description && (
-                    <span className="block truncate text-sm text-slate-500">{f.description}</span>
-                  )}
-                </span>
-                <ArrowRightIcon className="h-5 w-5 shrink-0 text-indigo-500" />
+                <FormCardContent name={f.name} description={f.description} />
               </Link>
             </li>
           ))}
