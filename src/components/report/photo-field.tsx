@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
-import { AlertCircleIcon, CameraIcon, CloseIcon } from "@/components/ui/icons";
+import { AlertCircleIcon, CameraIcon, CheckCircleIcon, CloseIcon } from "@/components/ui/icons";
+import { Spinner } from "@/components/ui/spinner";
 import {
   BLOB_ACCESS,
   MAX_PHOTO_BYTES,
@@ -10,10 +11,17 @@ import {
   type UploadedFile,
 } from "@/lib/report-config";
 
-export type PhotoState = { files: UploadedFile[]; busy: boolean };
+export type PhotoState = {
+  files: UploadedFile[];
+  total: number;
+  done: number;
+  uploading: number;
+  failed: number;
+};
 
 type Item = {
   id: string;
+  file: File;
   name: string;
   previewUrl: string;
   status: "uploading" | "done" | "error";
@@ -101,7 +109,10 @@ export function PhotoField({
   useEffect(() => {
     onChange({
       files: items.flatMap((i) => (i.status === "done" && i.uploaded ? [i.uploaded] : [])),
-      busy: items.some((i) => i.status === "uploading"),
+      total: items.length,
+      done: items.filter((i) => i.status === "done").length,
+      uploading: items.filter((i) => i.status === "uploading").length,
+      failed: items.filter((i) => i.status === "error").length,
     });
   }, [items, onChange]);
 
@@ -155,20 +166,23 @@ export function PhotoField({
     if (accepted.length === 0) return;
 
     const created = accepted.map((file) => ({
+      id: makeId(),
       file,
-      item: {
-        id: makeId(),
-        name: file.name,
-        previewUrl: URL.createObjectURL(file),
-        status: "uploading" as const,
-        progress: 0,
-      } satisfies Item,
+      name: file.name,
+      previewUrl: URL.createObjectURL(file),
+      status: "uploading" as const,
+      progress: 0,
     }));
-    setItems((prev) => [...prev, ...created.map((c) => c.item)]);
+    setItems((prev) => [...prev, ...created]);
 
     for (const c of created) {
-      await processFile(c.file, c.item.id);
+      await processFile(c.file, c.id);
     }
+  }
+
+  function retry(item: Item) {
+    patch(item.id, { status: "uploading", progress: 0, error: undefined });
+    void processFile(item.file, item.id);
   }
 
   function remove(id: string) {
@@ -177,9 +191,13 @@ export function PhotoField({
       if (target) URL.revokeObjectURL(target.previewUrl);
       return prev.filter((i) => i.id !== id);
     });
+    setNotice(null);
   }
 
   const full = items.length >= maxFiles;
+  const uploadingCount = items.filter((i) => i.status === "uploading").length;
+  const doneCount = items.filter((i) => i.status === "done").length;
+  const failedCount = items.filter((i) => i.status === "error").length;
 
   return (
     <div className="space-y-3">
@@ -202,19 +220,40 @@ export function PhotoField({
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={i.previewUrl} alt={i.name} className="h-full w-full object-cover" />
+
               {i.status === "uploading" && (
-                <div className="absolute inset-x-0 bottom-0 bg-slate-900/60 p-1.5">
-                  <div className="h-1.5 overflow-hidden rounded-full bg-white/30">
-                    <div className="h-full bg-white" style={{ width: `${i.progress}%` }} />
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-slate-900/55 text-white">
+                  <Spinner className="h-6 w-6" />
+                  <span className="text-xs font-semibold">{i.progress}%</span>
+                  <div className="absolute inset-x-2 bottom-2 h-1.5 overflow-hidden rounded-full bg-white/30">
+                    <div
+                      className="h-full bg-white transition-all"
+                      style={{ width: `${i.progress}%` }}
+                    />
                   </div>
                 </div>
               )}
+
+              {i.status === "done" && (
+                <span className="absolute bottom-1 left-1 rounded-full bg-white/90 p-0.5 text-emerald-600 shadow">
+                  <CheckCircleIcon className="h-5 w-5" />
+                </span>
+              )}
+
               {i.status === "error" && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-red-900/70 p-1 text-center text-[10px] text-white">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-red-900/80 p-1.5 text-center text-white">
                   <AlertCircleIcon className="h-5 w-5" />
-                  <span className="line-clamp-3">{i.error}</span>
+                  <span className="line-clamp-2 text-[10px] leading-tight">{i.error}</span>
+                  <button
+                    type="button"
+                    onClick={() => retry(i)}
+                    className="rounded-md bg-white px-2 py-1 text-[11px] font-semibold text-red-700 hover:bg-red-50"
+                  >
+                    Coba lagi
+                  </button>
                 </div>
               )}
+
               <button
                 type="button"
                 onClick={() => remove(i.id)}
@@ -232,7 +271,7 @@ export function PhotoField({
         type="button"
         disabled={full}
         onClick={() => inputRef.current?.click()}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 px-4 py-4 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50"
+        className="flex w-full items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-indigo-200 bg-indigo-50/50 px-4 py-4 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-50 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
       >
         <CameraIcon className="h-5 w-5" />
         {items.length === 0 ? "Ambil atau pilih foto" : "Tambah foto"}
@@ -241,6 +280,23 @@ export function PhotoField({
         </span>
       </button>
 
+      {uploadingCount > 0 && (
+        <p className="flex items-center gap-2 text-sm text-indigo-600">
+          <Spinner />
+          Mengunggah foto... {doneCount} dari {items.length} selesai
+        </p>
+      )}
+      {uploadingCount === 0 && failedCount > 0 && (
+        <p className="text-sm text-red-600">
+          {failedCount} foto gagal diunggah. Tekan &quot;Coba lagi&quot; pada foto itu, atau hapus.
+        </p>
+      )}
+      {uploadingCount === 0 && failedCount === 0 && doneCount > 0 && (
+        <p className="flex items-center gap-1.5 text-sm text-emerald-600">
+          <CheckCircleIcon className="h-4 w-4" />
+          {doneCount} foto siap dikirim
+        </p>
+      )}
       {notice && <p className="text-xs text-amber-600">{notice}</p>}
     </div>
   );

@@ -6,6 +6,7 @@ import { getReportDetail } from "@/lib/reports";
 import { updateReportStatus } from "@/actions/admin-report";
 import { StatusBadge } from "@/components/admin/dashboard/status-badge";
 import { ChevronLeftIcon } from "@/components/ui/icons";
+import { SubmitButton } from "@/components/ui/submit-button";
 
 const ACTIONS: Record<ReportStatus, { label: string; className: string }> = {
   REVIEWED: {
@@ -89,15 +90,15 @@ export default async function LaporanDetailPage({
         <form action={updateReportStatus} className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-5">
           <input type="hidden" name="reportId" value={report.id} />
           {nextStatuses.map((s) => (
-            <button
+            <SubmitButton
               key={s}
-              type="submit"
               name="status"
               value={s}
+              pendingText="Menyimpan..."
               className={`rounded-xl px-4 py-2.5 text-sm font-semibold transition ${ACTIONS[s].className}`}
             >
               {ACTIONS[s].label}
-            </button>
+            </SubmitButton>
           ))}
         </form>
       </section>

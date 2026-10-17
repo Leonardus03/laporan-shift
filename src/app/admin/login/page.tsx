@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { login } from "@/actions/auth";
+import { Spinner } from "@/components/ui/spinner";
 import {
   ArrowRightIcon,
   AtIcon,
@@ -137,7 +138,10 @@ export default function LoginPage() {
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 py-4 text-base font-semibold text-white shadow-lg shadow-indigo-600/30 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {pending ? (
-                "Memproses..."
+                <>
+                  <Spinner className="h-5 w-5" />
+                  Memproses...
+                </>
               ) : (
                 <>
                   Masuk

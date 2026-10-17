@@ -4,6 +4,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { logout } from "@/actions/auth";
+import { LinkPending } from "@/components/ui/link-pending";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   CloseIcon,
   DashboardIcon,
@@ -83,7 +85,8 @@ export function AdminShell({
               }`}
             >
               <Icon className="h-5 w-5" />
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              <LinkPending className="h-4 w-4" />
             </Link>
           );
         })}
@@ -152,13 +155,15 @@ export function AdminShell({
               </div>
             </div>
             <form action={logout}>
-              <button
-                type="submit"
-                className="flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              <SubmitButton
+                pendingText="Keluar..."
+                className="rounded-lg px-2.5 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
               >
-                <LogoutIcon className="h-4 w-4" />
-                <span className="hidden sm:inline">Keluar</span>
-              </button>
+                <span className="flex items-center gap-1.5">
+                  <LogoutIcon className="h-4 w-4" />
+                  <span className="hidden sm:inline">Keluar</span>
+                </span>
+              </SubmitButton>
             </form>
           </div>
         </header>

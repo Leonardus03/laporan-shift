@@ -1,6 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { Spinner } from "@/components/ui/spinner";
 import { DownloadIcon } from "@/components/ui/icons";
 
 const selectClass =
@@ -14,6 +16,7 @@ export function FilterBar({
   shifts: { id: string; name: string }[];
 }) {
   const router = useRouter();
+  const [pending, startTransition] = useTransition();
 
   function update(key: string, value: string) {
     const params = new URLSearchParams(current);
@@ -21,14 +24,23 @@ export function FilterBar({
     else params.delete(key);
     params.delete("page");
     const qs = params.toString();
-    router.push(qs ? `/admin/dashboard?${qs}` : "/admin/dashboard");
+    startTransition(() => {
+      router.push(qs ? `/admin/dashboard?${qs}` : "/admin/dashboard");
+    });
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2" aria-busy={pending}>
+      {pending && (
+        <span className="flex items-center gap-1.5 text-sm text-indigo-600">
+          <Spinner />
+          Memuat...
+        </span>
+      )}
       <select
         aria-label="Periode"
         value={current.range ?? "7"}
+        disabled={pending}
         onChange={(e) => update("range", e.target.value)}
         className={selectClass}
       >
@@ -39,6 +51,7 @@ export function FilterBar({
       <select
         aria-label="Shift"
         value={current.shift ?? ""}
+        disabled={pending}
         onChange={(e) => update("shift", e.target.value)}
         className={selectClass}
       >

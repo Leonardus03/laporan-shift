@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReportStatus } from "@prisma/client";
 import { ChevronLeftIcon, ChevronRightIcon, FilterIcon, InboxStackIcon, SearchIcon } from "@/components/ui/icons";
+import { LinkLabel, LinkPending } from "@/components/ui/link-pending";
 import { PAGE_SIZE, STATUS_OPTIONS } from "@/lib/reports";
 import { FORM_BADGES } from "./palette";
 import { StatusBadge, statusLabel } from "./status-badge";
@@ -195,8 +196,12 @@ export function ReportsTable({
               return (
                 <tr key={r.id} className={r.status === "REJECTED" ? "bg-red-50/50" : "hover:bg-slate-50/60"}>
                   <td className="px-5 py-4 font-mono text-xs font-bold">
-                    <Link href={`/admin/laporan/${r.id}`} className="text-indigo-700 hover:underline">
+                    <Link
+                      href={`/admin/laporan/${r.id}`}
+                      className="inline-flex items-center gap-1.5 text-indigo-700 hover:underline"
+                    >
                       {r.shortId}
+                      <LinkPending />
                     </Link>
                   </td>
                   <td className="px-3 py-4 text-slate-600">
@@ -229,9 +234,10 @@ export function ReportsTable({
                   <td className="px-5 py-4 text-right">
                     <Link
                       href={`/admin/laporan/${r.id}`}
-                      className="whitespace-nowrap text-sm font-semibold text-indigo-600 hover:text-indigo-700"
+                      className="inline-flex items-center gap-1.5 whitespace-nowrap text-sm font-semibold text-indigo-600 hover:text-indigo-700"
                     >
                       Detail
+                      <LinkPending />
                     </Link>
                   </td>
                 </tr>
@@ -249,7 +255,9 @@ export function ReportsTable({
           <nav className="flex items-center gap-1" aria-label="Halaman">
             {page > 1 ? (
               <Link href={hrefFor(page - 1)} aria-label="Sebelumnya" className="rounded-lg p-2 hover:bg-slate-100">
-                <ChevronLeftIcon className="h-4 w-4" />
+                <LinkLabel>
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </LinkLabel>
               </Link>
             ) : (
               <span className="rounded-lg p-2 text-slate-300">
@@ -272,13 +280,15 @@ export function ReportsTable({
                       : "rounded-lg px-3 py-1.5 hover:bg-slate-100"
                   }
                 >
-                  {p}
+                  <LinkLabel>{p}</LinkLabel>
                 </Link>
               )
             )}
             {page < totalPages ? (
               <Link href={hrefFor(page + 1)} aria-label="Berikutnya" className="rounded-lg p-2 hover:bg-slate-100">
-                <ChevronRightIcon className="h-4 w-4" />
+                <LinkLabel>
+                  <ChevronRightIcon className="h-4 w-4" />
+                </LinkLabel>
               </Link>
             ) : (
               <span className="rounded-lg p-2 text-slate-300">
