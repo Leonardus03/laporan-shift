@@ -30,7 +30,7 @@ type NavItem = {
 const NAV: NavItem[] = [
   { label: "Dashboard", href: "/admin/dashboard", icon: DashboardIcon, ready: true },
   { label: "Laporan Masuk", href: "/admin/laporan", icon: InboxIcon, ready: true },
-  { label: "Jenis Laporan", href: "/admin/form-builder", icon: ListIcon, ready: false },
+  { label: "Jenis Laporan", href: "/admin/form-builder", icon: ListIcon, ready: true },
   { label: "Master Data", href: "/admin/master", icon: DatabaseIcon, ready: false },
   { label: "Audit Log", href: "/admin/audit-log", icon: HistoryIcon, ready: false },
   { label: "Pengguna Admin", href: "/admin/admin-users", icon: UsersIcon, ready: false },
